@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Virtual environments
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Cognis local data
+*.db
+qdrant/
+
+# Environment
+.env
+
+# Test/coverage
+.pytest_cache/
+htmlcov/
+.coverage

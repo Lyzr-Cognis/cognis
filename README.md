@@ -1,4 +1,4 @@
-# Cognis (lyzr-memory-lite)
+# Cognis
 
 Lightweight, local-first memory for LLM agents. Zero external services — everything runs in-process.
 

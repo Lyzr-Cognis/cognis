@@ -2,14 +2,14 @@
 
 ### Lightweight memory for AI agents
 
-![PyPI](https://img.shields.io/badge/pypi-0.1.0-BA998C?style=flat-square) ![Python](https://img.shields.io/badge/python-%3E%3D3.10-5E403E?style=flat-square) ![License](https://img.shields.io/badge/license-MIT-27272A?style=flat-square) ![Deps](https://img.shields.io/badge/deps-3-D4A574?style=flat-square)
+![PyPI](https://img.shields.io/pypi/v/lyzr-cognis?style=flat-square&color=BA998C) ![Python](https://img.shields.io/badge/python-%3E%3D3.10-5E403E?style=flat-square) ![License](https://img.shields.io/badge/license-MIT-27272A?style=flat-square) ![Deps](https://img.shields.io/badge/deps-3-D4A574?style=flat-square)
 
 ---
 
 ## Features
 
 - **Hybrid search** — Two-stage Matryoshka vector search (256D shortlist, 768D rerank) + BM25 keyword matching via SQLite FTS5, fused with RRF (70/30 split, tuned from ablation studies)
-- **Zero infrastructure** — Everything runs in-process. Qdrant local mode (file-backed) + SQLite. No Docker, no servers, just `pip install`
+- **Zero infrastructure** — Everything runs in-process. Qdrant local mode (file-backed) + SQLite. No Docker, no servers, just `pip install lyzr-cognis`
 - **Smart extraction** — LLM-powered fact extraction with 13 auto-tagged categories, memory versioning (ADD/UPDATE/DELETE), and name-aware facts
 - **Session management** — `owner_id` + `agent_id` + `session_id` scoping that matches the hosted Cognis platform. Memories are global, messages are session-scoped
 - **Fast retrieval** — ~500ms search latency (embedding API bottleneck), ~4ms with cache hits
@@ -19,7 +19,7 @@
 **1. Install**
 
 ```bash
-pip install lyzr-memory-lite
+pip install lyzr-cognis
 ```
 
 **2. Set your API keys**
@@ -107,6 +107,24 @@ m.set_agent("agent_2")  # Switch agent
 - **Raw messages** are scoped to `(owner_id, agent_id, session_id)` — session-local
 - **Search** returns global memories + current session messages
 
+### Per-call ID overrides
+
+Pass IDs at call time instead of (or in addition to) init:
+
+```python
+m = Cognis(session_id="ses_1")
+
+# Different owners per call
+m.add(messages, owner_id="alice", agent_id="bot_1")
+m.add(messages, owner_id="bob", agent_id="bot_1")
+
+# Search scoped to specific owner
+m.search("query", owner_id="alice")
+
+# Context for specific session
+m.get_context(messages, session_id="ses_morning")
+```
+
 ## Configuration
 
 ```python
@@ -142,7 +160,7 @@ Only 3 core dependencies:
 | `litellm` | 55 MB | LLM + embedding provider abstraction |
 | `pydantic` | 7 MB | Config validation |
 
-SQLite is Python stdlib. Total install: ~156 MB. Wheel size: 30 KB.
+SQLite is Python stdlib. Total install: ~156 MB. Wheel size: 33 KB.
 
 ## Development
 

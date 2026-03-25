@@ -1,7 +1,7 @@
 """
 Cognis — Lightweight, local-first memory for LLM agents.
 
-pip install lyzr-memory-lite
+pip install lyzr-cognis
 
 Usage:
     from cognis import Cognis, CognisConfig

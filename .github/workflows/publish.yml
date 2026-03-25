@@ -1,45 +1,50 @@
 name: Publish to PyPI
 
 on:
-  release:
-    types: [published]
-
-permissions:
-  id-token: write
+  push:
+    tags:
+      - "v*"
 
 jobs:
   build:
+    name: Build distribution
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
-      - name: Install build tools
-        run: pip install build
+      - name: Install build
+        run: python3 -m pip install build --user
 
-      - name: Build package
-        run: python -m build
+      - name: Build wheel and sdist
+        run: python3 -m build
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
-          name: dist
+          name: python-package-distributions
           path: dist/
 
-  publish:
+  publish-to-pypi:
+    name: Publish to PyPI
+    if: startsWith(github.ref, 'refs/tags/')
     needs: build
     runs-on: ubuntu-latest
-    environment: pypi
+    environment:
+      name: pypi
+      url: https://pypi.org/p/lyzr-cognis
     permissions:
       id-token: write
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
-          name: dist
+          name: python-package-distributions
           path: dist/
 
       - name: Publish to PyPI

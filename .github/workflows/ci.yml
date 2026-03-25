@@ -25,18 +25,21 @@ jobs:
           pip install -e ".[dev]"
           pip install python-dotenv
 
-      - name: Run store tests (no API keys needed)
+      - name: Run store tests
         run: pytest tests/test_stores.py -v
 
-      - name: Syntax check all files
-        run: python -c "
+      - name: Syntax check
+        run: |
+          python -c "
           import ast, pathlib, sys
           errors = []
           for f in pathlib.Path('cognis').rglob('*.py'):
-              try: ast.parse(f.read_text())
-              except SyntaxError as e: errors.append(f'{f}: {e}')
+              try:
+                  ast.parse(f.read_text())
+              except SyntaxError as e:
+                  errors.append(str(f) + ': ' + str(e))
           if errors:
-              print('\n'.join(errors))
+              print(chr(10).join(errors))
               sys.exit(1)
           print('All files pass syntax check')
           "

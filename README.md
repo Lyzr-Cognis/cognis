@@ -1,4 +1,4 @@
-![Cognis — Lightweight memory for AI agents](assets/banner.svg)
+![Cognis — Lightweight memory for AI agents](https://github.com/user-attachments/assets/78bb56fb-ebcb-4800-a4d4-2a56964630b4)
 
 ### Lightweight memory for AI agents
 
@@ -60,8 +60,8 @@ m.close()
 ```
 
 ## Architecture
+![architecture](https://github.com/user-attachments/assets/671ccbd0-63a6-4277-8a4a-63c67e9dcd23)
 
-![Cognis search pipeline](assets/architecture.svg)
 
 ## API Reference
 

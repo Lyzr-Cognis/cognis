@@ -1,7 +1,5 @@
 ![Cognis — Lightweight memory for AI agents](https://github.com/user-attachments/assets/7e895d4d-1e1f-41d2-88e6-db06b6d02e6a)
 
-![Uploading architecture.svg…]()
-
 ### Lightweight memory for AI agents
 
 ![PyPI](https://img.shields.io/pypi/v/lyzr-cognis?style=flat-square&color=E8751A) ![Python](https://img.shields.io/badge/python-%3E%3D3.10-E8751A?style=flat-square) ![License](https://img.shields.io/badge/license-MIT-E8751A?style=flat-square) ![Deps](https://img.shields.io/badge/deps-3-FF9B3E?style=flat-square)

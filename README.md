@@ -1,10 +1,9 @@
-![Cognis — Lightweight memory for AI agents](https://github.com/user-attachments/assets/78bb56fb-ebcb-4800-a4d4-2a56964630b4)
+![Cognis — Lightweight memory for AI agents](https://github.com/user-attachments/assets/7e895d4d-1e1f-41d2-88e6-db06b6d02e6a)
+
+![Uploading architecture.svg…]()
 
 ### Lightweight memory for AI agents
 
-<<<<<<< HEAD
-![PyPI](https://img.shields.io/pypi/v/lyzr-cognis?style=flat-square&color=BA998C) ![Python](https://img.shields.io/badge/python-%3E%3D3.10-5E403E?style=flat-square) ![License](https://img.shields.io/badge/license-MIT-27272A?style=flat-square) ![Deps](https://img.shields.io/badge/deps-3-D4A574?style=flat-square)
-=======
 ![PyPI](https://img.shields.io/pypi/v/lyzr-cognis?style=flat-square&color=E8751A) ![Python](https://img.shields.io/badge/python-%3E%3D3.10-E8751A?style=flat-square) ![License](https://img.shields.io/badge/license-MIT-E8751A?style=flat-square) ![Deps](https://img.shields.io/badge/deps-3-FF9B3E?style=flat-square)
 >>>>>>> 04ada47 (update assets and readme to dark theme with orange accents)
 
@@ -64,7 +63,7 @@ m.close()
 ```
 
 ## Architecture
-![architecture](https://github.com/user-attachments/assets/671ccbd0-63a6-4277-8a4a-63c67e9dcd23)
+![architecture](https://github.com/user-attachments/assets/4a5849c8-76ac-44e3-bb4f-e03edbdddc98)
 
 
 ## API Reference

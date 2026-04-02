@@ -1,46 +1,56 @@
 <svg width="1200" height="400" viewBox="0 0 1200 400" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="hero-bg" x1="300" y1="0" x2="900" y2="400" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#5E403E"/>
-      <stop offset="100%" stop-color="#8A6560"/>
+      <stop offset="0%" stop-color="#1A0E06"/>
+      <stop offset="100%" stop-color="#2A1608"/>
+    </linearGradient>
+    <linearGradient id="arc-glow" x1="0" y1="300" x2="1200" y2="350" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#E8751A" stop-opacity="0"/>
+      <stop offset="30%" stop-color="#E8751A" stop-opacity="0.15"/>
+      <stop offset="50%" stop-color="#FF8C28" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#E8751A" stop-opacity="0"/>
     </linearGradient>
   </defs>
 
   <!-- Background -->
-  <rect width="1200" height="400" rx="16" fill="#F5F0ED"/>
+  <rect width="1200" height="400" rx="16" fill="#0D0D0D"/>
+
+  <!-- Subtle arc glow (inspired by the hero image) -->
+  <ellipse cx="600" cy="480" rx="700" ry="180" fill="none" stroke="#E8751A" stroke-width="2" opacity="0.25"/>
+  <ellipse cx="600" cy="484" rx="700" ry="180" fill="none" stroke="#FF8C28" stroke-width="1" opacity="0.12"/>
 
   <!-- ══════════════════════════════════════════ -->
   <!-- Card 1: Hybrid Search (top-left)           -->
   <!-- ══════════════════════════════════════════ -->
-  <rect x="16" y="16" width="276" height="178" rx="12" fill="#FFFFFF" stroke="#E8E0DC" stroke-width="1"/>
-  <text x="36" y="46" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="16" font-weight="700" fill="#27272A">Hybrid Search</text>
-  <text x="36" y="66" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#8A7A7E">Vector + BM25 RRF fusion</text>
+  <rect x="16" y="16" width="276" height="178" rx="12" fill="#141414" stroke="#2A1E16" stroke-width="1"/>
+  <text x="36" y="46" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="16" font-weight="700" fill="#EFEFEF">Hybrid Search</text>
+  <text x="36" y="66" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#8A8078">Vector + BM25 RRF fusion</text>
 
-  <rect x="36" y="82" width="68" height="22" rx="5" fill="#F0E8E4"/>
-  <text x="46" y="97" font-family="'SF Mono', Menlo, monospace" font-size="10" fill="#5E403E">Vector 70%</text>
-  <rect x="112" y="82" width="60" height="22" rx="5" fill="#F0E8E4"/>
-  <text x="120" y="97" font-family="'SF Mono', Menlo, monospace" font-size="10" fill="#5E403E">BM25 30%</text>
+  <rect x="36" y="82" width="68" height="22" rx="5" fill="#1E1614"/>
+  <text x="46" y="97" font-family="'SF Mono', Menlo, monospace" font-size="10" fill="#E8751A">Vector 70%</text>
+  <rect x="112" y="82" width="60" height="22" rx="5" fill="#1E1614"/>
+  <text x="120" y="97" font-family="'SF Mono', Menlo, monospace" font-size="10" fill="#E8751A">BM25 30%</text>
 
-  <text x="36" y="126" font-family="system-ui, sans-serif" font-size="11.5" fill="#5A5A5E">Two-stage Matryoshka search</text>
-  <text x="36" y="146" font-family="system-ui, sans-serif" font-size="11.5" fill="#5A5A5E">256D shortlist, 768D rerank</text>
-  <text x="36" y="166" font-family="system-ui, sans-serif" font-size="11.5" fill="#5A5A5E">Temporal + recency boosting</text>
+  <text x="36" y="126" font-family="system-ui, sans-serif" font-size="11.5" fill="#A0A0A4">Two-stage Matryoshka search</text>
+  <text x="36" y="146" font-family="system-ui, sans-serif" font-size="11.5" fill="#A0A0A4">256D shortlist, 768D rerank</text>
+  <text x="36" y="166" font-family="system-ui, sans-serif" font-size="11.5" fill="#A0A0A4">Temporal + recency boosting</text>
 
   <!-- ══════════════════════════════════════════ -->
   <!-- Card 2: Zero Infrastructure (bottom-left)  -->
   <!-- ══════════════════════════════════════════ -->
-  <rect x="16" y="206" width="276" height="178" rx="12" fill="#FFFFFF" stroke="#E8E0DC" stroke-width="1"/>
-  <text x="36" y="236" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="16" font-weight="700" fill="#27272A">Zero Infrastructure</text>
-  <text x="36" y="256" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#8A7A7E">Everything runs in-process</text>
+  <rect x="16" y="206" width="276" height="178" rx="12" fill="#141414" stroke="#2A1E16" stroke-width="1"/>
+  <text x="36" y="236" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="16" font-weight="700" fill="#EFEFEF">Zero Infrastructure</text>
+  <text x="36" y="256" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#8A8078">Everything runs in-process</text>
 
-  <circle cx="48" cy="280" r="3.5" fill="#BA998C"/>
-  <text x="60" y="284" font-family="system-ui, sans-serif" font-size="11.5" fill="#5A5A5E">Qdrant local (file-backed)</text>
-  <circle cx="48" cy="302" r="3.5" fill="#BA998C"/>
-  <text x="60" y="306" font-family="system-ui, sans-serif" font-size="11.5" fill="#5A5A5E">SQLite FTS5 (BM25 built-in)</text>
-  <circle cx="48" cy="324" r="3.5" fill="#BA998C"/>
-  <text x="60" y="328" font-family="system-ui, sans-serif" font-size="11.5" fill="#5A5A5E">No Docker, no servers</text>
+  <circle cx="48" cy="280" r="3.5" fill="#E8751A"/>
+  <text x="60" y="284" font-family="system-ui, sans-serif" font-size="11.5" fill="#A0A0A4">Qdrant local (file-backed)</text>
+  <circle cx="48" cy="302" r="3.5" fill="#E8751A"/>
+  <text x="60" y="306" font-family="system-ui, sans-serif" font-size="11.5" fill="#A0A0A4">SQLite FTS5 (BM25 built-in)</text>
+  <circle cx="48" cy="324" r="3.5" fill="#E8751A"/>
+  <text x="60" y="328" font-family="system-ui, sans-serif" font-size="11.5" fill="#A0A0A4">No Docker, no servers</text>
 
-  <rect x="36" y="344" width="88" height="22" rx="5" fill="#F0E8E4"/>
-  <text x="46" y="359" font-family="'SF Mono', Menlo, monospace" font-size="10" fill="#5E403E">pip install</text>
+  <rect x="36" y="344" width="88" height="22" rx="5" fill="#1E1614"/>
+  <text x="46" y="359" font-family="'SF Mono', Menlo, monospace" font-size="10" fill="#E8751A">pip install</text>
 
   <!-- ══════════════════════════════════════════ -->
   <!-- Card 3: HERO (center)                      -->
@@ -49,82 +59,82 @@
 
   <!-- Cognis Logomark (inline left of title) -->
   <g transform="translate(488, 52) scale(0.04)">
-    <path d="M539.119 629.56C556.509 629.56 570.601 643.652 570.601 661.042V710.746C570.601 719.108 573.932 727.103 579.828 733L585.192 738.364C591.089 744.26 599.117 747.592 607.446 747.592H637.428C654.818 747.592 668.91 761.683 668.91 779.073V912.862C668.91 930.251 654.818 944.343 637.428 944.343H582.327C564.937 944.343 550.845 930.251 550.845 912.862V783.837C550.845 775.475 547.514 767.48 541.617 761.583L536.854 756.82C530.957 750.923 522.928 747.592 514.6 747.592H429.55C421.188 747.592 413.192 750.923 407.296 756.82L402.699 761.417C396.802 767.313 393.471 775.342 393.471 783.67V912.862C393.471 930.251 379.379 944.343 361.989 944.343H306.888C289.498 944.343 275.406 930.251 275.406 912.862V779.073C275.406 761.683 289.498 747.592 306.888 747.592H336.67C345.032 747.592 353.028 744.26 358.924 738.364L364.554 732.734C370.451 726.837 373.782 718.808 373.782 710.48V661.009C373.782 643.619 387.874 629.527 405.264 629.527H539.119V629.56Z" fill="#BA998C"/>
-    <path d="M165.27 275.41C182.66 275.41 196.752 289.502 196.752 306.892V336.674C196.752 345.036 200.083 353.031 205.98 358.928L211.61 364.558C217.506 370.455 225.535 373.786 233.863 373.786H283.301C300.691 373.786 314.783 387.878 314.783 405.268V539.123C314.783 556.513 300.691 570.604 283.301 570.604H233.597C225.235 570.604 217.24 573.936 211.343 579.832L205.946 585.229C200.05 591.126 196.718 599.154 196.718 607.483V637.432C196.718 654.822 182.627 668.914 165.237 668.914H31.4816C14.0918 668.914 0 654.822 0 637.432V582.331C0 564.941 14.0918 550.849 31.4816 550.849H160.506C168.868 550.849 176.863 547.518 182.76 541.621L187.524 536.857C193.42 530.961 196.752 522.932 196.752 514.604V429.52C196.752 421.158 193.42 413.163 187.524 407.266L182.96 402.702C177.063 396.806 169.035 393.474 160.706 393.474H31.4816C14.0918 393.474 0 379.383 0 361.993V306.892C0 289.502 14.0918 275.41 31.4816 275.41H165.27Z" fill="#BA998C"/>
-    <path d="M912.834 275.41C930.223 275.41 944.315 289.502 944.315 306.892V361.993C944.315 379.383 930.223 393.474 912.834 393.474H783.609C775.247 393.474 767.252 396.806 761.355 402.702L756.791 407.266C750.895 413.163 747.563 421.192 747.563 429.52V514.604C747.563 522.966 750.895 530.961 756.791 536.857L761.555 541.621C767.452 547.518 775.48 550.849 783.809 550.849H912.834C930.223 550.849 944.315 564.941 944.315 582.331V637.432C944.315 654.822 930.223 668.914 912.834 668.914H779.045C761.655 668.914 747.563 654.822 747.563 637.432V607.483C747.563 599.121 744.232 591.126 738.335 585.229L732.939 579.832C727.042 573.936 719.013 570.604 710.685 570.604H660.981C643.591 570.604 629.499 556.513 629.499 539.123V405.268C629.499 387.878 643.591 373.786 660.981 373.786H710.418C718.78 373.786 726.775 370.455 732.672 364.558L738.302 358.928C744.199 353.031 747.53 345.003 747.53 336.674V306.892C747.53 289.502 761.622 275.41 779.012 275.41H912.8H912.834Z" fill="#BA998C"/>
-    <path d="M539.052 373.816C556.442 373.816 570.534 387.908 570.534 405.298V539.086C570.534 556.476 556.442 570.568 539.052 570.568H405.264C387.874 570.568 373.782 556.476 373.782 539.086V405.298C373.782 387.908 387.874 373.816 405.264 373.816H539.052Z" fill="#BA998C"/>
-    <path d="M361.989 0C379.379 0 393.471 14.0916 393.471 31.4815V160.673C393.471 169.035 396.802 177.03 402.698 182.926L407.296 187.524C413.192 193.42 421.221 196.752 429.549 196.752H514.6C522.962 196.752 530.957 193.42 536.853 187.524L541.651 182.726C547.547 176.83 550.879 168.801 550.879 160.473V31.4815C550.879 14.0916 564.97 0 582.36 0H637.461C654.851 0 668.943 14.0916 668.943 31.4815V165.27C668.943 182.66 654.851 196.752 637.461 196.752H607.479C599.117 196.752 591.122 200.083 585.225 205.98L579.862 211.343C573.965 217.24 570.634 225.268 570.634 233.597V283.301C570.634 300.691 556.542 314.783 539.152 314.783H405.297C387.907 314.783 373.815 300.691 373.815 283.301V233.863C373.815 225.502 370.484 217.506 364.587 211.61L358.957 205.98C353.061 200.083 345.032 196.752 336.704 196.752H306.921C289.531 196.752 275.439 182.66 275.439 165.27V31.4815C275.439 14.0916 289.531 0 306.921 0H362.022H361.989Z" fill="#BA998C"/>
+    <path d="M539.119 629.56C556.509 629.56 570.601 643.652 570.601 661.042V710.746C570.601 719.108 573.932 727.103 579.828 733L585.192 738.364C591.089 744.26 599.117 747.592 607.446 747.592H637.428C654.818 747.592 668.91 761.683 668.91 779.073V912.862C668.91 930.251 654.818 944.343 637.428 944.343H582.327C564.937 944.343 550.845 930.251 550.845 912.862V783.837C550.845 775.475 547.514 767.48 541.617 761.583L536.854 756.82C530.957 750.923 522.928 747.592 514.6 747.592H429.55C421.188 747.592 413.192 750.923 407.296 756.82L402.699 761.417C396.802 767.313 393.471 775.342 393.471 783.67V912.862C393.471 930.251 379.379 944.343 361.989 944.343H306.888C289.498 944.343 275.406 930.251 275.406 912.862V779.073C275.406 761.683 289.498 747.592 306.888 747.592H336.67C345.032 747.592 353.028 744.26 358.924 738.364L364.554 732.734C370.451 726.837 373.782 718.808 373.782 710.48V661.009C373.782 643.619 387.874 629.527 405.264 629.527H539.119V629.56Z" fill="#FFFFFF"/>
+    <path d="M165.27 275.41C182.66 275.41 196.752 289.502 196.752 306.892V336.674C196.752 345.036 200.083 353.031 205.98 358.928L211.61 364.558C217.506 370.455 225.535 373.786 233.863 373.786H283.301C300.691 373.786 314.783 387.878 314.783 405.268V539.123C314.783 556.513 300.691 570.604 283.301 570.604H233.597C225.235 570.604 217.24 573.936 211.343 579.832L205.946 585.229C200.05 591.126 196.718 599.154 196.718 607.483V637.432C196.718 654.822 182.627 668.914 165.237 668.914H31.4816C14.0918 668.914 0 654.822 0 637.432V582.331C0 564.941 14.0918 550.849 31.4816 550.849H160.506C168.868 550.849 176.863 547.518 182.76 541.621L187.524 536.857C193.42 530.961 196.752 522.932 196.752 514.604V429.52C196.752 421.158 193.42 413.163 187.524 407.266L182.96 402.702C177.063 396.806 169.035 393.474 160.706 393.474H31.4816C14.0918 393.474 0 379.383 0 361.993V306.892C0 289.502 14.0918 275.41 31.4816 275.41H165.27Z" fill="#FFFFFF"/>
+    <path d="M912.834 275.41C930.223 275.41 944.315 289.502 944.315 306.892V361.993C944.315 379.383 930.223 393.474 912.834 393.474H783.609C775.247 393.474 767.252 396.806 761.355 402.702L756.791 407.266C750.895 413.163 747.563 421.192 747.563 429.52V514.604C747.563 522.966 750.895 530.961 756.791 536.857L761.555 541.621C767.452 547.518 775.48 550.849 783.809 550.849H912.834C930.223 550.849 944.315 564.941 944.315 582.331V637.432C944.315 654.822 930.223 668.914 912.834 668.914H779.045C761.655 668.914 747.563 654.822 747.563 637.432V607.483C747.563 599.121 744.232 591.126 738.335 585.229L732.939 579.832C727.042 573.936 719.013 570.604 710.685 570.604H660.981C643.591 570.604 629.499 556.513 629.499 539.123V405.268C629.499 387.878 643.591 373.786 660.981 373.786H710.418C718.78 373.786 726.775 370.455 732.672 364.558L738.302 358.928C744.199 353.031 747.53 345.003 747.53 336.674V306.892C747.53 289.502 761.622 275.41 779.012 275.41H912.8H912.834Z" fill="#FFFFFF"/>
+    <path d="M539.052 373.816C556.442 373.816 570.534 387.908 570.534 405.298V539.086C570.534 556.476 556.442 570.568 539.052 570.568H405.264C387.874 570.568 373.782 556.476 373.782 539.086V405.298C373.782 387.908 387.874 373.816 405.264 373.816H539.052Z" fill="#FFFFFF"/>
+    <path d="M361.989 0C379.379 0 393.471 14.0916 393.471 31.4815V160.673C393.471 169.035 396.802 177.03 402.698 182.926L407.296 187.524C413.192 193.42 421.221 196.752 429.549 196.752H514.6C522.962 196.752 530.957 193.42 536.853 187.524L541.651 182.726C547.547 176.83 550.879 168.801 550.879 160.473V31.4815C550.879 14.0916 564.97 0 582.36 0H637.461C654.851 0 668.943 14.0916 668.943 31.4815V165.27C668.943 182.66 654.851 196.752 637.461 196.752H607.479C599.117 196.752 591.122 200.083 585.225 205.98L579.862 211.343C573.965 217.24 570.634 225.268 570.634 233.597V283.301C570.634 300.691 556.542 314.783 539.152 314.783H405.297C387.907 314.783 373.815 300.691 373.815 283.301V233.863C373.815 225.502 370.484 217.506 364.587 211.61L358.957 205.98C353.061 200.083 345.032 196.752 336.704 196.752H306.921C289.531 196.752 275.439 182.66 275.439 165.27V31.4815C275.439 14.0916 289.531 0 306.921 0H362.022H361.989Z" fill="#FFFFFF"/>
   </g>
 
   <!-- Title (to the right of logomark) -->
-  <text x="536" y="88" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="42" font-weight="700" fill="#EFEFEF">Cognis</text>
-  <text x="600" y="118" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="16" fill="#CDB8B0" text-anchor="middle">Lightweight memory for AI agents</text>
+  <text x="536" y="88" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="42" font-weight="700" fill="#FFFFFF">Cognis</text>
+  <text x="600" y="118" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="16" fill="#D4B8A0" text-anchor="middle">Lightweight memory for AI agents</text>
 
   <!-- Code snippet -->
-  <rect x="380" y="140" width="440" height="168" rx="8" fill="#2A2024" opacity="0.6"/>
+  <rect x="380" y="140" width="440" height="168" rx="8" fill="#0D0D0D" opacity="0.7"/>
   <text font-family="'SF Mono', 'Fira Code', Menlo, Consolas, monospace" font-size="12.5" xml:space="preserve">
-    <tspan x="400" y="168" fill="#D4A574">from </tspan><tspan fill="#CDB8B0">cognis </tspan><tspan fill="#D4A574">import </tspan><tspan fill="#EFEFEF">Cognis</tspan>
-    <tspan x="400" y="192" fill="#888890">m = Cognis(owner_id=</tspan><tspan fill="#BA998C">"user_1"</tspan><tspan fill="#888890">)</tspan>
-    <tspan x="400" y="220" fill="#888890">m.add([{</tspan><tspan fill="#BA998C">"role"</tspan><tspan fill="#888890">: </tspan><tspan fill="#BA998C">"user"</tspan><tspan fill="#888890">, ...}])</tspan>
-    <tspan x="400" y="248" fill="#888890">m.search(</tspan><tspan fill="#BA998C">"What is my name?"</tspan><tspan fill="#888890">)</tspan>
+    <tspan x="400" y="168" fill="#FF9B3E">from </tspan><tspan fill="#D4B8A0">cognis </tspan><tspan fill="#FF9B3E">import </tspan><tspan fill="#FFFFFF">Cognis</tspan>
+    <tspan x="400" y="192" fill="#888890">m = Cognis(owner_id=</tspan><tspan fill="#E8751A">"user_1"</tspan><tspan fill="#888890">)</tspan>
+    <tspan x="400" y="220" fill="#888890">m.add([{</tspan><tspan fill="#E8751A">"role"</tspan><tspan fill="#888890">: </tspan><tspan fill="#E8751A">"user"</tspan><tspan fill="#888890">, ...}])</tspan>
+    <tspan x="400" y="248" fill="#888890">m.search(</tspan><tspan fill="#E8751A">"What is my name?"</tspan><tspan fill="#888890">)</tspan>
     <tspan x="400" y="276" fill="#888890">m.get_context(messages)</tspan>
   </text>
 
   <!-- Stats bar -->
-  <rect x="380" y="322" width="130" height="24" rx="6" fill="#2A2024" opacity="0.4"/>
-  <text x="395" y="339" font-family="'SF Mono', Menlo, monospace" font-size="11" fill="#BA998C">3 dependencies</text>
+  <rect x="380" y="322" width="130" height="24" rx="6" fill="#0D0D0D" opacity="0.5"/>
+  <text x="395" y="339" font-family="'SF Mono', Menlo, monospace" font-size="11" fill="#E8751A">3 dependencies</text>
 
-  <rect x="520" y="322" width="100" height="24" rx="6" fill="#2A2024" opacity="0.4"/>
-  <text x="535" y="339" font-family="'SF Mono', Menlo, monospace" font-size="11" fill="#BA998C">30 KB wheel</text>
+  <rect x="520" y="322" width="100" height="24" rx="6" fill="#0D0D0D" opacity="0.5"/>
+  <text x="535" y="339" font-family="'SF Mono', Menlo, monospace" font-size="11" fill="#E8751A">30 KB wheel</text>
 
-  <rect x="630" y="322" width="110" height="24" rx="6" fill="#2A2024" opacity="0.4"/>
-  <text x="645" y="339" font-family="'SF Mono', Menlo, monospace" font-size="11" fill="#BA998C">~500ms search</text>
+  <rect x="630" y="322" width="110" height="24" rx="6" fill="#0D0D0D" opacity="0.5"/>
+  <text x="645" y="339" font-family="'SF Mono', Menlo, monospace" font-size="11" fill="#E8751A">~500ms search</text>
 
   <!-- Powered by -->
-  <text x="878" y="370" font-family="system-ui, sans-serif" font-size="11" fill="#9A7A76" text-anchor="end" opacity="0.5">powered by Lyzr</text>
+  <text x="878" y="370" font-family="system-ui, sans-serif" font-size="11" fill="#6A6058" text-anchor="end" opacity="0.5">powered by Lyzr</text>
 
   <!-- ══════════════════════════════════════════ -->
   <!-- Card 4: Memory Extraction (top-right)      -->
   <!-- ══════════════════════════════════════════ -->
-  <rect x="908" y="16" width="276" height="178" rx="12" fill="#FFFFFF" stroke="#E8E0DC" stroke-width="1"/>
-  <text x="928" y="46" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="16" font-weight="700" fill="#27272A">Smart Extraction</text>
-  <text x="928" y="66" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#8A7A7E">LLM-powered fact extraction</text>
+  <rect x="908" y="16" width="276" height="178" rx="12" fill="#141414" stroke="#2A1E16" stroke-width="1"/>
+  <text x="928" y="46" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="16" font-weight="700" fill="#EFEFEF">Smart Extraction</text>
+  <text x="928" y="66" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#8A8078">LLM-powered fact extraction</text>
 
   <!-- Flow -->
-  <rect x="928" y="82" width="72" height="22" rx="5" fill="#F0E8E4"/>
-  <text x="938" y="97" font-family="'SF Mono', Menlo, monospace" font-size="10" fill="#5E403E">Messages</text>
-  <line x1="1004" y1="93" x2="1016" y2="93" stroke="#BA998C" stroke-width="1.5"/>
-  <polygon points="1014,89 1020,93 1014,97" fill="#BA998C"/>
-  <rect x="1022" y="82" width="52" height="22" rx="5" fill="#F0E8E4"/>
-  <text x="1031" y="97" font-family="'SF Mono', Menlo, monospace" font-size="10" fill="#5E403E">Extract</text>
-  <line x1="1078" y1="93" x2="1090" y2="93" stroke="#BA998C" stroke-width="1.5"/>
-  <polygon points="1088,89 1094,93 1088,97" fill="#BA998C"/>
-  <rect x="1096" y="82" width="68" height="22" rx="5" fill="#F0E8E4"/>
-  <text x="1105" y="97" font-family="'SF Mono', Menlo, monospace" font-size="10" fill="#5E403E">Memories</text>
+  <rect x="928" y="82" width="72" height="22" rx="5" fill="#1E1614"/>
+  <text x="938" y="97" font-family="'SF Mono', Menlo, monospace" font-size="10" fill="#E8751A">Messages</text>
+  <line x1="1004" y1="93" x2="1016" y2="93" stroke="#E8751A" stroke-width="1.5"/>
+  <polygon points="1014,89 1020,93 1014,97" fill="#E8751A"/>
+  <rect x="1022" y="82" width="52" height="22" rx="5" fill="#1E1614"/>
+  <text x="1031" y="97" font-family="'SF Mono', Menlo, monospace" font-size="10" fill="#E8751A">Extract</text>
+  <line x1="1078" y1="93" x2="1090" y2="93" stroke="#E8751A" stroke-width="1.5"/>
+  <polygon points="1088,89 1094,93 1088,97" fill="#E8751A"/>
+  <rect x="1096" y="82" width="68" height="22" rx="5" fill="#1E1614"/>
+  <text x="1105" y="97" font-family="'SF Mono', Menlo, monospace" font-size="10" fill="#E8751A">Memories</text>
 
-  <polyline points="935,127 940,132 949,122" fill="none" stroke="#5E403E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="957" y="131" font-family="system-ui, sans-serif" font-size="11.5" fill="#5A5A5E">13 categories auto-tagged</text>
-  <polyline points="935,149 940,154 949,144" fill="none" stroke="#5E403E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="957" y="153" font-family="system-ui, sans-serif" font-size="11.5" fill="#5A5A5E">ADD / UPDATE / DELETE</text>
-  <polyline points="935,171 940,176 949,166" fill="none" stroke="#5E403E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="957" y="175" font-family="system-ui, sans-serif" font-size="11.5" fill="#5A5A5E">Name-aware facts</text>
+  <polyline points="935,127 940,132 949,122" fill="none" stroke="#E8751A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="957" y="131" font-family="system-ui, sans-serif" font-size="11.5" fill="#A0A0A4">13 categories auto-tagged</text>
+  <polyline points="935,149 940,154 949,144" fill="none" stroke="#E8751A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="957" y="153" font-family="system-ui, sans-serif" font-size="11.5" fill="#A0A0A4">ADD / UPDATE / DELETE</text>
+  <polyline points="935,171 940,176 949,166" fill="none" stroke="#E8751A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="957" y="175" font-family="system-ui, sans-serif" font-size="11.5" fill="#A0A0A4">Name-aware facts</text>
 
   <!-- ══════════════════════════════════════════ -->
   <!-- Card 5: API (bottom-right, dark)           -->
   <!-- ══════════════════════════════════════════ -->
-  <rect x="908" y="206" width="276" height="178" rx="12" fill="#1E1E22"/>
+  <rect x="908" y="206" width="276" height="178" rx="12" fill="#0D0D0D" stroke="#2A1E16" stroke-width="1"/>
   <text x="928" y="236" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="16" font-weight="700" fill="#EFEFEF">Simple API</text>
   <text x="928" y="256" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#6A6A6E">6 methods, that's it</text>
 
-  <text x="938" y="282" font-family="'SF Mono', 'Fira Code', Menlo, monospace" font-size="12" fill="#D4A574">add()</text>
-  <text x="938" y="302" font-family="'SF Mono', 'Fira Code', Menlo, monospace" font-size="12" fill="#D4A574">search()</text>
-  <text x="938" y="322" font-family="'SF Mono', 'Fira Code', Menlo, monospace" font-size="12" fill="#D4A574">get_context()</text>
+  <text x="938" y="282" font-family="'SF Mono', 'Fira Code', Menlo, monospace" font-size="12" fill="#FF9B3E">add()</text>
+  <text x="938" y="302" font-family="'SF Mono', 'Fira Code', Menlo, monospace" font-size="12" fill="#FF9B3E">search()</text>
+  <text x="938" y="322" font-family="'SF Mono', 'Fira Code', Menlo, monospace" font-size="12" fill="#FF9B3E">get_context()</text>
 
-  <text x="1068" y="282" font-family="'SF Mono', 'Fira Code', Menlo, monospace" font-size="12" fill="#D4A574">get()</text>
-  <text x="1068" y="302" font-family="'SF Mono', 'Fira Code', Menlo, monospace" font-size="12" fill="#D4A574">delete()</text>
-  <text x="1068" y="322" font-family="'SF Mono', 'Fira Code', Menlo, monospace" font-size="12" fill="#D4A574">clear()</text>
+  <text x="1068" y="282" font-family="'SF Mono', 'Fira Code', Menlo, monospace" font-size="12" fill="#FF9B3E">get()</text>
+  <text x="1068" y="302" font-family="'SF Mono', 'Fira Code', Menlo, monospace" font-size="12" fill="#FF9B3E">delete()</text>
+  <text x="1068" y="322" font-family="'SF Mono', 'Fira Code', Menlo, monospace" font-size="12" fill="#FF9B3E">clear()</text>
 
-  <line x1="928" y1="340" x2="1164" y2="340" stroke="#333338" stroke-width="1"/>
-  <text x="938" y="362" font-family="system-ui, sans-serif" font-size="11" fill="#555560">owner_id + agent_id + session_id</text>
-  <text x="938" y="378" font-family="system-ui, sans-serif" font-size="10" fill="#444448">Scoped like the hosted platform</text>
+  <line x1="928" y1="340" x2="1164" y2="340" stroke="#2A1E16" stroke-width="1"/>
+  <text x="938" y="362" font-family="system-ui, sans-serif" font-size="11" fill="#777780">owner_id + agent_id + session_id</text>
+  <text x="938" y="378" font-family="system-ui, sans-serif" font-size="10" fill="#555558">Scoped like the hosted platform</text>
 </svg>

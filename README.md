@@ -2,7 +2,11 @@
 
 ### Lightweight memory for AI agents
 
+<<<<<<< HEAD
 ![PyPI](https://img.shields.io/pypi/v/lyzr-cognis?style=flat-square&color=BA998C) ![Python](https://img.shields.io/badge/python-%3E%3D3.10-5E403E?style=flat-square) ![License](https://img.shields.io/badge/license-MIT-27272A?style=flat-square) ![Deps](https://img.shields.io/badge/deps-3-D4A574?style=flat-square)
+=======
+![PyPI](https://img.shields.io/pypi/v/lyzr-cognis?style=flat-square&color=E8751A) ![Python](https://img.shields.io/badge/python-%3E%3D3.10-E8751A?style=flat-square) ![License](https://img.shields.io/badge/license-MIT-E8751A?style=flat-square) ![Deps](https://img.shields.io/badge/deps-3-FF9B3E?style=flat-square)
+>>>>>>> 04ada47 (update assets and readme to dark theme with orange accents)
 
 ---
 

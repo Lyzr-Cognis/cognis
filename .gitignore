@@ -7,7 +7,7 @@ dist/
 build/
 
 # Virtual environments
-.venv/
+.venv*/
 
 # IDE
 .idea/
@@ -23,7 +23,15 @@ qdrant/
 # Environment
 .env
 
+# Cognis Claude plugin config (contains API key)
+.claude/.cognis-claude/
+
 # Test/coverage
 .pytest_cache/
 htmlcov/
 .coverage
+
+# Local-only working dirs (not part of the SDK)
+website/
+results/
+uv.lock

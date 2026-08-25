@@ -82,3 +82,64 @@ class CognisConfig:
     # Immediate recall
     enable_immediate_recall: bool = True
     immediate_recall_ttl_hours: int = 48
+
+    # Optional remote cross-encoder reranking. Disabled unless an endpoint is configured.
+    remote_rerank_url: Optional[str] = None
+    rerank_provider: str = ""
+    remote_rerank_timeout: float = 5.0
+    enable_relevance_gate: bool = False
+    relevance_gate_threshold: float = 0.05  # legacy absolute cutoff (unused when noise-floor gate active)
+    relevance_gate_noise_floor: float = 1e-4  # top rerank score below this => no plausibly relevant memory
+    relevance_gate_relative_frac: float = 0.05  # keep items scoring >= frac * top score
+    relevance_gate_min_keep: int = 10  # floor of candidates kept once noise floor is cleared
+    enable_chain_attachment: bool = True
+    chain_max_ancestors: int = 3
+
+    # v3 dual-tier serving: raw verbatim evidence alongside extracted facts.
+    enable_raw_evidence: bool = False
+    raw_evidence_limit: int = 20  # candidate raw messages fused into ranking
+    raw_evidence_window: int = 2  # neighbor turns attached around a served raw hit
+    enable_conflict_attachment: bool = True  # surface conflicts_with pairs on serve
+    global_query_limit: int = 30  # widened limit for summarization/global queries
+
+    @classmethod
+    def from_env(cls, **overrides) -> "CognisConfig":
+        """Build a config honoring COGNIS_* environment variables.
+
+        Recognized: COGNIS_RERANK_PROVIDER, COGNIS_REMOTE_RERANK_URL,
+        COGNIS_REMOTE_RERANK_TIMEOUT, COGNIS_ENABLE_RELEVANCE_GATE,
+        COGNIS_RELEVANCE_GATE_THRESHOLD, COGNIS_ENABLE_CHAIN_ATTACHMENT.
+        Explicit ``overrides`` win over environment values.
+        """
+        import os
+
+        def _b(v: str) -> bool:
+            return v.strip().lower() in ("1", "true", "yes", "on")
+
+        env_map = {}
+        if os.getenv("COGNIS_RERANK_PROVIDER") is not None:
+            env_map["rerank_provider"] = os.environ["COGNIS_RERANK_PROVIDER"]
+        if os.getenv("COGNIS_REMOTE_RERANK_URL"):
+            env_map["remote_rerank_url"] = os.environ["COGNIS_REMOTE_RERANK_URL"]
+        if os.getenv("COGNIS_REMOTE_RERANK_TIMEOUT"):
+            env_map["remote_rerank_timeout"] = float(os.environ["COGNIS_REMOTE_RERANK_TIMEOUT"])
+        if os.getenv("COGNIS_ENABLE_RELEVANCE_GATE") is not None:
+            env_map["enable_relevance_gate"] = _b(os.environ["COGNIS_ENABLE_RELEVANCE_GATE"])
+        if os.getenv("COGNIS_RELEVANCE_GATE_THRESHOLD"):
+            env_map["relevance_gate_threshold"] = float(os.environ["COGNIS_RELEVANCE_GATE_THRESHOLD"])
+        if os.getenv("COGNIS_RELEVANCE_GATE_NOISE_FLOOR"):
+            env_map["relevance_gate_noise_floor"] = float(os.environ["COGNIS_RELEVANCE_GATE_NOISE_FLOOR"])
+        if os.getenv("COGNIS_RELEVANCE_GATE_RELATIVE_FRAC"):
+            env_map["relevance_gate_relative_frac"] = float(os.environ["COGNIS_RELEVANCE_GATE_RELATIVE_FRAC"])
+        if os.getenv("COGNIS_RELEVANCE_GATE_MIN_KEEP"):
+            env_map["relevance_gate_min_keep"] = int(os.environ["COGNIS_RELEVANCE_GATE_MIN_KEEP"])
+        if os.getenv("COGNIS_ENABLE_CHAIN_ATTACHMENT") is not None:
+            env_map["enable_chain_attachment"] = _b(os.environ["COGNIS_ENABLE_CHAIN_ATTACHMENT"])
+        if os.getenv("COGNIS_ENABLE_RAW_EVIDENCE") is not None:
+            env_map["enable_raw_evidence"] = _b(os.environ["COGNIS_ENABLE_RAW_EVIDENCE"])
+        if os.getenv("COGNIS_RAW_EVIDENCE_LIMIT"):
+            env_map["raw_evidence_limit"] = int(os.environ["COGNIS_RAW_EVIDENCE_LIMIT"])
+        if os.getenv("COGNIS_GLOBAL_QUERY_LIMIT"):
+            env_map["global_query_limit"] = int(os.environ["COGNIS_GLOBAL_QUERY_LIMIT"])
+        env_map.update(overrides)
+        return cls(**env_map)

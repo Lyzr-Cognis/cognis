@@ -20,6 +20,7 @@ Usage:
 
 import os
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
@@ -70,7 +71,7 @@ class Cognis:
     ):
         _require_at_least_one(owner_id=owner_id, agent_id=agent_id, session_id=session_id)
 
-        self._config = config or CognisConfig()
+        self._config = config or CognisConfig.from_env()
         self._owner_id = owner_id
         self._agent_id = agent_id
         self._session_id = session_id or generate_session_id()
@@ -129,6 +130,7 @@ class Cognis:
         owner_id: Optional[str] = None,
         agent_id: Optional[str] = None,
         session_id: Optional[str] = None,
+        reference_time: Optional[datetime] = None,
     ) -> Dict[str, Any]:
         """
         Add messages and extract memories.
@@ -138,6 +140,9 @@ class Cognis:
             owner_id: Override owner (defaults to instance owner_id)
             agent_id: Override agent (defaults to instance agent_id)
             session_id: Override session (defaults to instance session_id)
+            reference_time: Event-time anchor for backfilled data (benchmark
+                session dates); stamps created_at/event_time on extracted
+                memories. None = live behavior (now).
         """
         oid = owner_id or self._owner_id
         aid = agent_id or self._agent_id
@@ -181,6 +186,7 @@ class Cognis:
             session_id=sid,
             agent_id=aid,
             messages=messages,
+            reference_time=reference_time,
         )
 
         return {
@@ -197,6 +203,7 @@ class Cognis:
         owner_id: Optional[str] = None,
         agent_id: Optional[str] = None,
         session_id: Optional[str] = None,
+        include_historical: bool = False,
     ) -> Dict[str, Any]:
         """
         Search memories using hybrid RRF pipeline.
@@ -214,6 +221,7 @@ class Cognis:
             agent_id=aid,
             session_id=sid,
             limit=limit,
+            include_historical=include_historical,
         )
         return {
             "success": True,
@@ -270,6 +278,8 @@ class Cognis:
     def delete(self, memory_id: str, owner_id: Optional[str] = None) -> Dict[str, Any]:
         """Delete a specific memory. Returns {"success": True/False, "message": "..."}."""
         oid = owner_id or self._owner_id
+        # Public deletion remains a hard delete. Extraction DELETE operations retain a
+        # tombstone to prevent asynchronous/vector-path leakage before cleanup.
         deleted = self._sqlite.delete_memory(memory_id, oid)
         if deleted:
             self._qdrant.delete(memory_id)

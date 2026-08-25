@@ -14,7 +14,7 @@ import time
 from typing import List, Dict, Any, Optional, Tuple
 
 from cognis.models import Memory
-from cognis.utils import qdrant_uuid
+from cognis.utils import qdrant_uuid, now_utc
 
 logger = logging.getLogger(__name__)
 
@@ -170,7 +170,9 @@ class QdrantLocalStore:
             "type": "message",
             "role": role,
             "processed": False,
+            "created_at": now_utc().isoformat(),
             "is_current": True,
+            "status": "current",
         }
         self._client.upsert(
             collection_name=self._collection_small,
@@ -204,7 +206,9 @@ class QdrantLocalStore:
                 "type": "message",
                 "role": role,
                 "processed": False,
+                "created_at": now_utc().isoformat(),
                 "is_current": True,
+                "status": "current",
             }
             points.append(PointStruct(id=point_id, vector=emb, payload=payload))
 
@@ -225,6 +229,7 @@ class QdrantLocalStore:
         from qdrant_client.models import Filter, FieldCondition, MatchValue
 
         conditions = [FieldCondition(key="owner_id", match=MatchValue(value=owner_id))]
+        excluded = [FieldCondition(key="status", match=MatchValue(value="deleted"))]
 
         if not include_historical:
             conditions.append(FieldCondition(key="is_current", match=MatchValue(value=True)))
@@ -241,7 +246,7 @@ class QdrantLocalStore:
         if only_messages:
             conditions.append(FieldCondition(key="type", match=MatchValue(value="message")))
 
-        return Filter(must=conditions)
+        return Filter(must=conditions, must_not=excluded)
 
     def search(
         self,
@@ -335,10 +340,13 @@ class QdrantLocalStore:
             exclude_messages=False,
         )
         # Add MatchAny filter on memory_id
-        rerank_filter = Filter(must=[
-            *base_filter.must,
-            FieldCondition(key="memory_id", match=MatchAny(any=shortlist_ids)),
-        ])
+        rerank_filter = Filter(
+            must=[
+                *base_filter.must,
+                FieldCondition(key="memory_id", match=MatchAny(any=shortlist_ids)),
+            ],
+            must_not=base_filter.must_not,
+        )
 
         rerank_results = self._client.query_points(
             collection_name=self._collection_full,
@@ -373,8 +381,11 @@ class QdrantLocalStore:
         owner_id: str,
         session_id: Optional[str] = None,
         limit: int = 50,
+        bridge_ttl_hours: int = 48,
     ) -> List[Dict[str, Any]]:
-        """Search immediate recall (raw messages in 256D)."""
+        """Search unprocessed session messages for immediate recall."""
+        if not session_id:
+            return []
         qf = self._build_filter(
             owner_id=owner_id,
             session_id=session_id,
@@ -391,15 +402,66 @@ class QdrantLocalStore:
         )
 
         points = results.points if hasattr(results, "points") else []
-        return [
-            {
-                "memory_id": p.payload.get("memory_id", ""),
-                "content": p.payload.get("content", ""),
-                "score": p.score,
-                "role": p.payload.get("role", "user"),
-            }
-            for p in points
+        messages = []
+        for point in points:
+            payload = point.payload
+            if payload.get("status") == "deleted" or payload.get("processed", False):
+                continue
+            messages.append({
+                "memory_id": payload.get("memory_id", ""),
+                "content": payload.get("content", ""),
+                "score": point.score,
+                "role": payload.get("role", "user"),
+            })
+        return messages
+
+    def search_raw_evidence(
+        self,
+        query_256d: List[float],
+        owner_id: str,
+        agent_id: Optional[str] = None,
+        limit: int = 50,
+    ) -> List[Dict[str, Any]]:
+        """Search raw message vectors across an owner's sessions."""
+        from qdrant_client.models import Filter, FieldCondition, MatchValue
+
+        conditions = [
+            FieldCondition(key="owner_id", match=MatchValue(value=owner_id)),
+            FieldCondition(key="type", match=MatchValue(value="message")),
         ]
+        if agent_id:
+            conditions.append(FieldCondition(key="agent_id", match=MatchValue(value=agent_id)))
+
+        results = self._client.query_points(
+            collection_name=self._collection_small,
+            query=query_256d,
+            query_filter=Filter(must=conditions),
+            limit=limit,
+            with_payload=True,
+        )
+        points = results.points if hasattr(results, "points") else []
+        messages = [
+            {
+                "memory_id": point.payload.get("memory_id", ""),
+                "content": point.payload.get("content", ""),
+                "score": point.score,
+                "role": point.payload.get("role", "user"),
+            }
+            for point in points
+        ]
+        return sorted(messages, key=lambda message: message["score"], reverse=True)
+
+    def mark_messages_processed(self, message_ids: List[str]) -> None:
+        """Mark immediate-recall points as processed in the small collection."""
+        for message_id in message_ids:
+            try:
+                self._client.set_payload(
+                    collection_name=self._collection_small,
+                    payload={"processed": True},
+                    points=[qdrant_uuid(message_id, "256d")],
+                )
+            except Exception:
+                logger.debug("Could not mark immediate message %s processed", message_id)
 
     # ── Delete / Update ──────────────────────────────────────────────────
 

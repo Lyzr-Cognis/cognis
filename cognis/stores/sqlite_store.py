@@ -28,9 +28,12 @@ CREATE TABLE IF NOT EXISTS memories (
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     event_time TEXT,
+    valid_from TEXT,
+    valid_until TEXT,
     status TEXT DEFAULT 'current',
     is_current INTEGER DEFAULT 1,
     replaces_id TEXT,
+    conflicts_with TEXT,
     version INTEGER DEFAULT 1,
     salience_score REAL DEFAULT 0.5,
     decay_score REAL DEFAULT 1.0,
@@ -86,6 +89,16 @@ CREATE TABLE IF NOT EXISTS messages (
     created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS memory_conflicts (
+    owner_id TEXT NOT NULL,
+    memory_id TEXT NOT NULL,
+    conflict_memory_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (owner_id, memory_id, conflict_memory_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_memory_conflicts_memory ON memory_conflicts(owner_id, memory_id);
+
 CREATE INDEX IF NOT EXISTS idx_memories_owner ON memories(owner_id);
 CREATE INDEX IF NOT EXISTS idx_memories_session ON memories(owner_id, session_id);
 CREATE INDEX IF NOT EXISTS idx_memories_agent ON memories(owner_id, agent_id);
@@ -110,6 +123,11 @@ class SQLiteStore:
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA synchronous=NORMAL")
         self._conn.executescript(_SCHEMA_SQL)
+        # Existing databases predate validity columns; migrate without failing on either state.
+        columns = {row["name"] for row in self._conn.execute("PRAGMA table_info(memories)")}
+        for column in ("valid_from", "valid_until", "conflicts_with"):
+            if column not in columns:
+                self._conn.execute(f"ALTER TABLE memories ADD COLUMN {column} TEXT")
         self._conn.commit()
 
     def close(self) -> None:
@@ -154,7 +172,7 @@ class SQLiteStore:
         offset: int = 0,
         include_historical: bool = False,
     ) -> List[Memory]:
-        sql = "SELECT * FROM memories WHERE owner_id = ?"
+        sql = "SELECT * FROM memories WHERE owner_id = ? AND status != 'deleted'"
         params: list = [owner_id]
 
         if not include_historical:
@@ -173,6 +191,8 @@ class SQLiteStore:
         return [Memory.from_sqlite_row(dict(r)) for r in rows]
 
     def update_memory(self, memory_id: str, owner_id: str, updates: Dict[str, Any]) -> bool:
+        if isinstance(updates.get("conflicts_with"), list):
+            updates["conflicts_with"] = json.dumps(updates["conflicts_with"])
         updates["updated_at"] = now_utc().isoformat()
         set_clause = ", ".join(f"{k} = ?" for k in updates)
         values = list(updates.values()) + [memory_id, owner_id]
@@ -195,7 +215,74 @@ class SQLiteStore:
         return self.update_memory(memory_id, owner_id, {
             "is_current": 0,
             "status": MemoryStatus.HISTORICAL.value,
+            "valid_until": now_utc().isoformat(),
         })
+
+    def mark_deleted(self, memory_id: str, owner_id: str) -> bool:
+        """Tombstone a memory so old vector points cannot be recalled."""
+        return self.update_memory(memory_id, owner_id, {
+            "is_current": 0,
+            "status": MemoryStatus.DELETED.value,
+            "valid_until": now_utc().isoformat(),
+        })
+
+    def get_ancestor_chain(self, memory_id: str, owner_id: str, limit: int) -> List[Memory]:
+        """Return non-deleted predecessor versions, newest parent first."""
+        ancestors = []
+        current_id = memory_id
+        seen = set()
+        while current_id and current_id not in seen and len(ancestors) < limit:
+            seen.add(current_id)
+            row = self._conn.execute(
+                "SELECT * FROM memories WHERE memory_id = ? AND owner_id = ? AND status != 'deleted'",
+                (current_id, owner_id),
+            ).fetchone()
+            if row is None:
+                break
+            parent_id = row["replaces_id"]
+            if not parent_id:
+                break
+            parent = self._conn.execute(
+                "SELECT * FROM memories WHERE memory_id = ? AND owner_id = ? AND status != 'deleted'",
+                (parent_id, owner_id),
+            ).fetchone()
+            if parent is None:
+                break
+            parent_memory = Memory.from_sqlite_row(dict(parent))
+            ancestors.append(parent_memory)
+            current_id = parent_memory.memory_id
+        return ancestors
+
+    def link_conflict(self, memory_id: str, conflict_memory_id: str, owner_id: str) -> None:
+        """Record a conflict relationship in both directions."""
+        if memory_id == conflict_memory_id:
+            return
+        created_at = now_utc().isoformat()
+        self._conn.executemany(
+            """INSERT OR IGNORE INTO memory_conflicts
+               (owner_id, memory_id, conflict_memory_id, created_at)
+               VALUES (?, ?, ?, ?)""",
+            [
+                (owner_id, memory_id, conflict_memory_id, created_at),
+                (owner_id, conflict_memory_id, memory_id, created_at),
+            ],
+        )
+        self._conn.commit()
+
+    def get_conflicts(self, memory_id: str, owner_id: str) -> List[Memory]:
+        """Return current memories linked as conflicts for a memory."""
+        rows = self._conn.execute(
+            """SELECT m.*
+               FROM memory_conflicts AS mc
+               JOIN memories AS m
+                 ON m.memory_id = mc.conflict_memory_id
+                AND m.owner_id = mc.owner_id
+               WHERE mc.owner_id = ?
+                 AND mc.memory_id = ?
+                 AND m.status = 'current'""",
+            (owner_id, memory_id),
+        ).fetchall()
+        return [Memory.from_sqlite_row(dict(row)) for row in rows]
 
     # ── BM25 Text Search (FTS5) ─────────────────────────────────────────
 
@@ -221,6 +308,7 @@ class SQLiteStore:
             JOIN memories m ON f.rowid = m.rowid
             WHERE memories_fts MATCH ?
               AND f.owner_id = ?
+              AND m.status != 'deleted'
         """
         params: list = [fts_query, owner_id]
 
@@ -291,6 +379,42 @@ class SQLiteStore:
         rows = self._conn.execute(sql, params).fetchall()
         return [dict(r) for r in rows]
 
+    def get_message_window(
+        self,
+        message_id: str,
+        owner_id: str,
+        radius: int = 2,
+    ) -> List[Dict[str, Any]]:
+        """Return a message and nearby messages in its session chronologically."""
+        if radius < 0:
+            return []
+        target = self._conn.execute(
+            "SELECT session_id FROM messages WHERE message_id = ? AND owner_id = ?",
+            (message_id, owner_id),
+        ).fetchone()
+        if target is None or target["session_id"] is None:
+            return []
+        rows = self._conn.execute(
+            """WITH ordered AS (
+                   SELECT messages.*, ROW_NUMBER() OVER (ORDER BY created_at ASC, id ASC) AS position
+                   FROM messages
+                   WHERE owner_id = ? AND session_id = ?
+               ), target AS (
+                   SELECT position FROM ordered WHERE message_id = ?
+               )
+               SELECT ordered.*
+               FROM ordered, target
+               WHERE ordered.position BETWEEN target.position - ? AND target.position + ?
+               ORDER BY ordered.position ASC""",
+            (owner_id, target["session_id"], message_id, radius, radius),
+        ).fetchall()
+        messages = []
+        for row in rows:
+            message = dict(row)
+            message.pop("position", None)
+            messages.append(message)
+        return messages
+
     def get_unprocessed_messages(
         self,
         session_id: str,
@@ -305,11 +429,18 @@ class SQLiteStore:
         rows = self._conn.execute(sql, params).fetchall()
         return [dict(r) for r in rows]
 
-    def mark_messages_processed(self, session_id: str) -> None:
-        self._conn.execute(
-            "UPDATE messages SET processed = 1 WHERE session_id = ? AND processed = 0",
-            (session_id,),
-        )
+    def mark_messages_processed(self, session_id: str, message_ids: Optional[List[str]] = None) -> None:
+        if message_ids:
+            placeholders = ", ".join("?" for _ in message_ids)
+            self._conn.execute(
+                f"UPDATE messages SET processed = 1 WHERE session_id = ? AND message_id IN ({placeholders})",
+                [session_id, *message_ids],
+            )
+        else:
+            self._conn.execute(
+                "UPDATE messages SET processed = 1 WHERE session_id = ? AND processed = 0",
+                (session_id,),
+            )
         self._conn.commit()
 
     def get_recent_messages(
@@ -346,7 +477,7 @@ class SQLiteStore:
 
     def count_memories(self, owner_id: str) -> int:
         row = self._conn.execute(
-            "SELECT COUNT(*) as cnt FROM memories WHERE owner_id = ? AND is_current = 1",
+            "SELECT COUNT(*) as cnt FROM memories WHERE owner_id = ? AND is_current = 1 AND status != 'deleted'",
             (owner_id,),
         ).fetchone()
         return row["cnt"] if row else 0

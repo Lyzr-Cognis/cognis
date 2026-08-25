@@ -88,7 +88,8 @@ UPDATE_MEMORY_PROMPT = """You are a memory management expert. Your task is to co
 
 2. **UPDATE** - Use when:
    - New fact refines or expands an existing fact
-   - Same topic but more detailed or more recent information
+   - New fact clearly supersedes an existing fact: it states the same fact with a newer value or temporal progression
+   - Same topic but more detailed information
    - Example: "likes pizza" + "loves pepperoni pizza" -> UPDATE to "loves pepperoni pizza"
 
    **CRITICAL - UPDATE RULES (REDUCE REDUNDANCY):**
@@ -98,13 +99,20 @@ UPDATE_MEMORY_PROMPT = """You are a memory management expert. Your task is to co
    - Only ADD for genuinely NEW information not covered by existing memories
    - Prefer UPDATE over ADD when facts are about the same entity
 
-3. **DELETE** - Use when:
-   - New fact directly contradicts existing fact
-   - User explicitly negates a previous statement
-   - Example: "likes pizza" + "actually I hate pizza now" -> DELETE old, ADD new
+3. **CONTRADICT** - Use when:
+   - The new statement and an existing memory make incompatible claims
+   - It is NOT clear that the new statement supersedes the old one
+   - This includes denials versus assertions or mutually exclusive states asserted about the same period
+   - Keep both memories as current so the conflict is preserved
+   - Example: "User has a dog" + "User says they do not have a dog" -> CONTRADICT
+
+4. **DELETE** - Use when:
+   - The user explicitly asks to forget or retract an existing fact
+   - The existing fact is clearly erroneous and should not be retained
+   - Do not use DELETE merely because claims are incompatible; use CONTRADICT unless the old fact is clearly superseded
    - **DO NOT DELETE** preferences just because of temporary constraints
 
-4. **NONE** - Use when:
+5. **NONE** - Use when:
    - Fact already exists in memory (semantically identical)
    - New fact provides no additional information
    - Cosmetic changes only (punctuation, capitalization)
@@ -112,7 +120,8 @@ UPDATE_MEMORY_PROMPT = """You are a memory management expert. Your task is to co
 **CRITICAL RULES:**
 - Don't delete preferences due to temporary inability (e.g., "can't hike due to injury" doesn't delete "loves hiking")
 - When updating, keep the version with MORE information
-- For contradictions, prefer the most recent information
+- Use UPDATE, not CONTRADICT, when the new information clearly supersedes the old information
+- Use CONTRADICT, not UPDATE, when incompatible claims cannot be resolved by recency or temporal progression
 
 **OUTPUT FORMAT:**
 Return a JSON object with the memory list and operations:
@@ -121,6 +130,7 @@ Return a JSON object with the memory list and operations:
   "memory": [
     {{"id": "existing_id", "text": "existing text", "event": "NONE"}},
     {{"id": "existing_id", "text": "updated text", "event": "UPDATE", "old_text": "previous text"}},
+    {{"id": "existing_id", "text": "new fact text", "event": "CONTRADICT"}},
     {{"id": "new", "text": "new fact", "event": "ADD"}},
     {{"id": "existing_id", "text": "deleted text", "event": "DELETE"}}
   ]

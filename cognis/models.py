@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from enum import Enum
+import json
 
 from cognis.utils import generate_memory_id, now_utc, qdrant_uuid, parse_iso_timestamp
 
@@ -65,9 +66,12 @@ class Memory:
     created_at: datetime = field(default_factory=now_utc)
     updated_at: datetime = field(default_factory=now_utc)
     event_time: Optional[datetime] = None
+    valid_from: Optional[datetime] = None
+    valid_until: Optional[datetime] = None
     status: MemoryStatus = MemoryStatus.CURRENT
     is_current: bool = True
     replaces_id: Optional[str] = None
+    conflicts_with: List[str] = field(default_factory=list)
     version: int = 1
     salience_score: float = 0.5
     decay_score: float = 1.0
@@ -75,6 +79,8 @@ class Memory:
     metadata: MemoryMetadata = field(default_factory=MemoryMetadata)
 
     def __post_init__(self):
+        if self.valid_from is None:
+            self.valid_from = self.created_at
         if isinstance(self.original_content, str):
             self.original_content = [self.original_content]
 
@@ -106,11 +112,14 @@ class Memory:
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "event_time": self.event_time.isoformat() if self.event_time else None,
+            "valid_from": self.valid_from.isoformat() if self.valid_from else None,
+            "valid_until": self.valid_until.isoformat() if self.valid_until else None,
             "metadata": self.metadata.to_dict(),
         }
+        result["status"] = self.status.value
+        result["replaces_id"] = self.replaces_id
+        result["conflicts_with"] = self.conflicts_with
         if not exclude_internal:
-            result["status"] = self.status.value
-            result["replaces_id"] = self.replaces_id
             result["salience_score"] = self.salience_score
             result["decay_score"] = self.decay_score
             result["original_content"] = self.original_content
@@ -126,9 +135,12 @@ class Memory:
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "event_time": self.event_time.isoformat() if self.event_time else None,
+            "valid_from": self.valid_from.isoformat() if self.valid_from else None,
+            "valid_until": self.valid_until.isoformat() if self.valid_until else None,
             "is_current": self.is_current,
             "status": self.status.value,
             "replaces_id": self.replaces_id,
+            "conflicts_with": self.conflicts_with,
             "version": self.version,
             "salience_score": self.salience_score,
             "category": self.metadata.category,
@@ -151,9 +163,12 @@ class Memory:
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "event_time": self.event_time.isoformat() if self.event_time else None,
+            "valid_from": self.valid_from.isoformat() if self.valid_from else None,
+            "valid_until": self.valid_until.isoformat() if self.valid_until else None,
             "status": self.status.value,
             "is_current": 1 if self.is_current else 0,
             "replaces_id": self.replaces_id,
+            "conflicts_with": json.dumps(self.conflicts_with),
             "version": self.version,
             "salience_score": self.salience_score,
             "decay_score": self.decay_score,
@@ -179,6 +194,14 @@ class Memory:
             original = original.split(",")
         else:
             original = None
+        conflicts_with = row.get("conflicts_with")
+        if isinstance(conflicts_with, str):
+            try:
+                conflicts_with = json.loads(conflicts_with)
+            except json.JSONDecodeError:
+                conflicts_with = []
+        if not isinstance(conflicts_with, list):
+            conflicts_with = []
 
         metadata = MemoryMetadata(
             category=row.get("category"),
@@ -199,9 +222,12 @@ class Memory:
             created_at=parse_iso_timestamp(row.get("created_at")),
             updated_at=parse_iso_timestamp(row.get("updated_at")),
             event_time=parse_iso_timestamp(row.get("event_time")) if row.get("event_time") else None,
+            valid_from=parse_iso_timestamp(row.get("valid_from")) if row.get("valid_from") else None,
+            valid_until=parse_iso_timestamp(row.get("valid_until")) if row.get("valid_until") else None,
             status=status,
             is_current=bool(row.get("is_current", 1)),
             replaces_id=row.get("replaces_id"),
+            conflicts_with=conflicts_with,
             version=row.get("version", 1),
             salience_score=row.get("salience_score", 0.5),
             decay_score=row.get("decay_score", 1.0),
@@ -233,9 +259,12 @@ class Memory:
             created_at=parse_iso_timestamp(payload.get("created_at")),
             updated_at=parse_iso_timestamp(payload.get("updated_at")),
             event_time=parse_iso_timestamp(payload.get("event_time")) if payload.get("event_time") else None,
+            valid_from=parse_iso_timestamp(payload.get("valid_from")) if payload.get("valid_from") else None,
+            valid_until=parse_iso_timestamp(payload.get("valid_until")) if payload.get("valid_until") else None,
             is_current=payload.get("is_current", True),
             status=status,
             replaces_id=payload.get("replaces_id"),
+            conflicts_with=payload.get("conflicts_with", []),
             version=payload.get("version", 1),
             salience_score=payload.get("salience_score", score),
             metadata=metadata,

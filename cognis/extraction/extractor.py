@@ -8,7 +8,7 @@ Pipeline:
 1. Get unprocessed messages
 2. Extract facts via LLM (USER_MEMORY_EXTRACTION_PROMPT)
 3. Find similar existing memories via vector search
-4. Decide operations via LLM (UPDATE_MEMORY_PROMPT): ADD/UPDATE/DELETE/NONE
+4. Decide operations via LLM (UPDATE_MEMORY_PROMPT): ADD/UPDATE/CONTRADICT/DELETE/NONE
 5. Process operations (store new, mark old as historical)
 6. Mark messages as processed
 """
@@ -27,6 +27,7 @@ from cognis.stores.qdrant_store import QdrantLocalStore
 from cognis.embeddings.base import BaseEmbedder
 from cognis.extraction.prompts import USER_MEMORY_EXTRACTION_PROMPT, UPDATE_MEMORY_PROMPT
 from cognis.utils import generate_memory_id, now_utc
+from cognis.search.temporal import extract_query_date
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,7 @@ class SyncFactExtractor:
         session_id: Optional[str] = None,
         agent_id: Optional[str] = None,
         messages: Optional[List[Dict[str, str]]] = None,
+        reference_time: Optional[datetime] = None,
     ) -> List[Memory]:
         """
         Extract facts from messages and store them.
@@ -66,13 +68,18 @@ class SyncFactExtractor:
             session_id: Current session
             agent_id: Current agent
             messages: Raw messages (if None, reads unprocessed from SQLite)
+            reference_time: Event-time anchor for backfilled conversations
+                (e.g. benchmark session dates). Resolves relative dates in
+                content against this instant and stamps created_at/event_time.
+                None (default) keeps live behavior: anchor = now.
 
         Returns:
             List of newly created Memory objects
         """
-        # Get messages
+        # Capture exact message ids before extraction so SQLite and immediate recall agree.
+        raw = self._sqlite.get_unprocessed_messages(session_id, owner_id) if session_id else []
+        message_ids = [m["message_id"] for m in raw]
         if messages is None and session_id:
-            raw = self._sqlite.get_unprocessed_messages(session_id, owner_id)
             messages = [{"role": m.get("role", "user"), "content": m.get("content", "")} for m in raw]
 
         if not messages:
@@ -93,14 +100,16 @@ class SyncFactExtractor:
 
         if not user_content.strip():
             if session_id:
-                self._sqlite.mark_messages_processed(session_id)
+                self._sqlite.mark_messages_processed(session_id, message_ids)
+                self._qdrant.mark_messages_processed(message_ids)
             return []
 
-        # Step 1: Extract facts via LLM
-        facts = self._extract_facts(user_content)
+        # Step 1: Extract facts via LLM (date-anchor on reference_time when backfilling)
+        facts = self._extract_facts(user_content, reference_time=reference_time)
         if not facts:
             if session_id:
-                self._sqlite.mark_messages_processed(session_id)
+                self._sqlite.mark_messages_processed(session_id, message_ids)
+                self._qdrant.mark_messages_processed(message_ids)
             return []
 
         # Step 2: Find similar existing memories
@@ -117,31 +126,56 @@ class SyncFactExtractor:
             op_id = op.get("id", "new")
 
             if event == "ADD" and text.strip():
-                memory = self._create_and_store(text, owner_id, session_id, agent_id)
+                memory = self._create_and_store(text, owner_id, session_id, agent_id, reference_time=reference_time)
                 if memory:
                     new_memories.append(memory)
 
             elif event == "UPDATE" and text.strip() and op_id != "new":
-                # Mark old as historical
-                self._sqlite.mark_historical(op_id, owner_id)
-                self._qdrant.update_payload(op_id, {"is_current": False, "status": "historical"})
+                # Close the old version in both stores before adding its successor.
+                closed_at = now_utc().isoformat()
+                self._sqlite.update_memory(op_id, owner_id, {"is_current": 0, "status": "historical", "valid_until": closed_at})
+                self._qdrant.update_payload(op_id, {"is_current": False, "status": "historical", "valid_until": closed_at})
                 # Get old version number
                 old = self._sqlite.get_memory(op_id, owner_id)
                 version = (old.version + 1) if old else 1
                 memory = self._create_and_store(
                     text, owner_id, session_id, agent_id,
-                    replaces_id=op_id, version=version,
+                    replaces_id=op_id, version=version, reference_time=reference_time,
                 )
                 if memory:
                     new_memories.append(memory)
 
+            elif event == "CONTRADICT" and text.strip() and op_id != "new":
+                # Preserve both claims as current and explicitly record their conflict.
+                memory = self._create_and_store(text, owner_id, session_id, agent_id, reference_time=reference_time)
+                if memory:
+                    self._sqlite.link_conflict(memory.memory_id, op_id, owner_id)
+                    old = self._sqlite.get_memory(op_id, owner_id)
+
+                    new_conflicts = list(dict.fromkeys([*memory.conflicts_with, op_id]))
+                    old_conflicts = list(dict.fromkeys([*(old.conflicts_with if old else []), memory.memory_id]))
+                    memory.conflicts_with = new_conflicts
+                    self._sqlite.update_memory(memory.memory_id, owner_id, {"conflicts_with": new_conflicts})
+                    self._qdrant.update_payload(
+                        memory.memory_id, {"conflicts_with": new_conflicts}
+                    )
+                    if old:
+                        old.conflicts_with = old_conflicts
+                        self._sqlite.update_memory(old.memory_id, owner_id, {"conflicts_with": old_conflicts})
+                        self._qdrant.update_payload(
+                            old.memory_id, {"conflicts_with": old_conflicts}
+                        )
+                    new_memories.append(memory)
+
             elif event == "DELETE" and op_id != "new":
-                self._sqlite.mark_historical(op_id, owner_id)
-                self._qdrant.update_payload(op_id, {"is_current": False, "status": "historical"})
+                closed_at = now_utc().isoformat()
+                self._sqlite.update_memory(op_id, owner_id, {"is_current": 0, "status": "deleted", "valid_until": closed_at})
+                self._qdrant.update_payload(op_id, {"is_current": False, "status": "deleted", "valid_until": closed_at})
 
         # Step 5: Mark messages as processed
         if session_id:
-            self._sqlite.mark_messages_processed(session_id)
+            self._sqlite.mark_messages_processed(session_id, message_ids)
+            self._qdrant.mark_messages_processed(message_ids)
 
         logger.info("Extracted %d new memories from %d messages", len(new_memories), len(messages))
         return new_memories
@@ -157,9 +191,9 @@ class SyncFactExtractor:
         )
         return response.choices[0].message.content.strip()
 
-    def _extract_facts(self, content: str) -> List[str]:
+    def _extract_facts(self, content: str, reference_time: Optional[datetime] = None) -> List[str]:
         """Call LLM to extract facts from content."""
-        now = datetime.now(timezone.utc)
+        now = reference_time or datetime.now(timezone.utc)
         next_month = now.replace(month=now.month % 12 + 1) if now.month < 12 else now.replace(year=now.year + 1, month=1)
 
         prompt = USER_MEMORY_EXTRACTION_PROMPT.format(
@@ -208,7 +242,7 @@ class SyncFactExtractor:
         facts: List[str],
         similar: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
-        """Call LLM to decide ADD/UPDATE/DELETE/NONE for each fact."""
+        """Call LLM to decide ADD/UPDATE/CONTRADICT/DELETE/NONE for each fact."""
         if not similar:
             # No existing memories — all facts are ADDs
             return [{"id": "new", "text": f, "event": "ADD"} for f in facts]
@@ -263,6 +297,7 @@ class SyncFactExtractor:
         agent_id: Optional[str],
         replaces_id: Optional[str] = None,
         version: int = 1,
+        reference_time: Optional[datetime] = None,
     ) -> Optional[Memory]:
         """Create a Memory, embed it, and store in both SQLite and Qdrant."""
         try:
@@ -274,6 +309,8 @@ class SyncFactExtractor:
 
             category = self._categorize_fact(content)
 
+            ref = reference_time or now_utc()
+            stamp = {"created_at": reference_time, "updated_at": reference_time} if reference_time else {}
             memory = Memory(
                 memory_id=generate_memory_id(),
                 content=content,
@@ -282,7 +319,9 @@ class SyncFactExtractor:
                 session_id=session_id,
                 replaces_id=replaces_id,
                 version=version,
+                event_time=extract_query_date(content, reference_time=ref) or reference_time,
                 metadata=MemoryMetadata(category=category, scope="user"),
+                **stamp,
             )
 
             self._sqlite.store_memory(memory)

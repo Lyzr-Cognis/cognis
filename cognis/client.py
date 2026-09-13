@@ -2,18 +2,50 @@
 CognisClient — hosted-mode client for the Lyzr memory service.
 
 Talks to a hosted lyzr-memory deployment over HTTPS with the same method
-surface as the local `Cognis` class. Authentication uses a Lyzr Studio API
-key sent as the `x-api-key` header; authorization (org scoping and RBAC
-permissions such as `memory:write`) is enforced server-side.
+surface as the local `Cognis` class. Authentication is configurable to match
+the service's pluggable auth modes:
+
+- API key (default): sent in the `api_key_header` (default `x-api-key`) —
+  Lyzr Studio keys, standalone `lm_...` keys, or PepGenX onboarding keys
+  (`api_key_header="x-pepgenx-apikey"`).
+- Bearer token: a static `token` or a `token_provider` callable (e.g.
+  `OktaClientCredentials`) sent as `Authorization: Bearer ...` — for
+  deployments validating Okta / any OIDC JWTs. On a 401 the provider is
+  refreshed once and the request retried.
+- Tenant headers: `tenant={"team_id": ..., "project_id": ..., "user_id": ...}`
+  sent on every request — required by composite (PepGenX-style) deployments.
+
+These combine: composite mode sends bearer + API key + tenant headers.
+Authorization (org/project scoping and RBAC permissions such as
+`memory:write`) is always enforced server-side.
 
 Configuration resolution order (param → env var → default):
-- api_key:  api_key param → $LYZR_API_KEY            (required)
-- base_url: base_url param → $BASE_MEMORY_URL → https://memory.studio.lyzr.ai
+- api_key:  api_key param → $LYZR_API_KEY
+- token:    token param   → $LYZR_MEMORY_TOKEN
+- base_url: base_url param → $LYZR_MEMORY_BASE_URL → $BASE_MEMORY_URL
+            → https://memory.studio.lyzr.ai
+At least one credential (api_key, token, or token_provider) is required.
 
 Usage:
     from cognis import CognisClient
 
+    # API key (default)
     m = CognisClient(api_key="lyzr-...", owner_id="user_123")
+
+    # Okta client-credentials (OIDC bearer)
+    from cognis import OktaClientCredentials
+    okta = OktaClientCredentials(issuer="https://acme.okta.com/oauth2/aus123",
+                                 client_id="0oa...", client_secret="...",
+                                 scopes=["memory.read", "memory.write"])
+    m = CognisClient(token_provider=okta, owner_id="user_123")
+
+    # PepGenX composite (bearer + API key + tenant headers)
+    m = CognisClient(token_provider=okta, api_key="pep-...",
+                     api_key_header="x-pepgenx-apikey",
+                     tenant={"team_id": "T1", "project_id": "P1",
+                             "user_id": "049000001"},
+                     owner_id="user_123")
+
     m.add([{"role": "user", "content": "My name is Alice"}])
     results = m.search("What is my name?")
     m.close()
@@ -21,7 +53,7 @@ Usage:
 
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Mapping, Optional
 
 import httpx
 
@@ -36,8 +68,11 @@ from cognis.utils import generate_session_id
 logger = logging.getLogger(__name__)
 
 DEFAULT_BASE_URL = "https://memory.studio.lyzr.ai"
-BASE_URL_ENV = "BASE_MEMORY_URL"
+BASE_URL_ENV = "LYZR_MEMORY_BASE_URL"
+LEGACY_BASE_URL_ENV = "BASE_MEMORY_URL"
 API_KEY_ENV = "LYZR_API_KEY"
+TOKEN_ENV = "LYZR_MEMORY_TOKEN"
+DEFAULT_API_KEY_HEADER = "x-api-key"
 PROVIDER_TYPE = "cognis"
 
 
@@ -49,7 +84,12 @@ def _require_at_least_one(**kwargs):
 
 
 def _resolve_base_url(base_url: Optional[str]) -> str:
-    url = base_url or os.environ.get(BASE_URL_ENV) or DEFAULT_BASE_URL
+    url = (
+        base_url
+        or os.environ.get(BASE_URL_ENV)
+        or os.environ.get(LEGACY_BASE_URL_ENV)
+        or DEFAULT_BASE_URL
+    )
     return url.rstrip("/")
 
 
@@ -62,9 +102,10 @@ class CognisClient:
     - Extracted memories are global to (owner_id, agent_id)
     - Raw messages are scoped to (owner_id, agent_id, session_id)
 
-    All data is additionally isolated to the organization that owns the API
-    key — the server derives the org from the key, so two orgs using the same
-    owner_id never see each other's memories.
+    All data is additionally isolated to the organization (and optional
+    project) resolved from the credential server-side — an API key's binding
+    or a bearer token's claims — so two orgs using the same owner_id never
+    see each other's memories.
     """
 
     def __init__(
@@ -76,25 +117,48 @@ class CognisClient:
         session_id: Optional[str] = None,
         timeout: float = 30.0,
         transport: Optional[httpx.BaseTransport] = None,
+        api_key_header: str = DEFAULT_API_KEY_HEADER,
+        token: Optional[str] = None,
+        token_provider: Optional[Callable[[], str]] = None,
+        tenant: Optional[Mapping[str, str]] = None,
+        tenant_headers: Optional[Mapping[str, str]] = None,
     ):
         """
         Args:
-            api_key: Lyzr Studio API key (default: $LYZR_API_KEY)
-            base_url: Memory service URL (default: $BASE_MEMORY_URL, then
-                https://memory.studio.lyzr.ai)
+            api_key: API key (default: $LYZR_API_KEY)
+            base_url: Memory service URL (default: $LYZR_MEMORY_BASE_URL,
+                then $BASE_MEMORY_URL, then https://memory.studio.lyzr.ai)
             owner_id: Memory owner identifier
             agent_id: Agent identifier
             session_id: Session identifier (auto-generated if omitted)
             timeout: Request timeout in seconds
             transport: Custom httpx transport (testing only)
+            api_key_header: Header name carrying the API key
+                (default "x-api-key"; PepGenX uses "x-pepgenx-apikey")
+            token: Static bearer token (default: $LYZR_MEMORY_TOKEN);
+                sent as `Authorization: Bearer ...`
+            token_provider: Zero-argument callable returning a bearer token,
+                called per request (e.g. OktaClientCredentials); mutually
+                exclusive with `token`. A 401 response triggers exactly one
+                `invalidate()` + retry when the provider supports it.
+            tenant: Tenant headers sent on every request, e.g.
+                {"team_id": "T1", "project_id": "P1", "user_id": "049..."}
+            tenant_headers: Optional rename map from `tenant` keys to wire
+                header names (default: keys are used verbatim)
         """
         _require_at_least_one(owner_id=owner_id, agent_id=agent_id, session_id=session_id)
 
+        if token and token_provider:
+            raise ValueError("Pass either token or token_provider, not both")
+
         self._api_key = api_key or os.environ.get(API_KEY_ENV)
-        if not self._api_key:
+        self._token = token or os.environ.get(TOKEN_ENV)
+        self._token_provider = token_provider
+        if not (self._api_key or self._token or self._token_provider):
             raise CognisAuthenticationError(
-                f"No API key provided. Pass api_key= or set the {API_KEY_ENV} "
-                "environment variable with your Lyzr Studio API key."
+                "No credentials provided. Pass api_key= (or set the "
+                f"{API_KEY_ENV} environment variable), token= (or set "
+                f"{TOKEN_ENV}), or token_provider=."
             )
 
         self._base_url = _resolve_base_url(base_url)
@@ -102,10 +166,19 @@ class CognisClient:
         self._agent_id = agent_id
         self._session_id = session_id or generate_session_id()
 
+        headers = {"Content-Type": "application/json"}
+        if self._api_key:
+            headers[api_key_header] = self._api_key
+        if self._token and not self._token_provider:
+            headers["Authorization"] = f"Bearer {self._token}"
+        for key, value in (tenant or {}).items():
+            if value is not None:
+                headers[(tenant_headers or {}).get(key, key)] = str(value)
+
         self._http = httpx.Client(
             base_url=self._base_url,
             timeout=timeout,
-            headers={"x-api-key": self._api_key, "Content-Type": "application/json"},
+            headers=headers,
             transport=transport,
         )
 
@@ -115,6 +188,25 @@ class CognisClient:
         )
 
     # ── HTTP plumbing ────────────────────────────────────────────────────
+
+    def _send(
+        self,
+        method: str,
+        path: str,
+        json: Optional[Dict[str, Any]],
+        params: Optional[Dict[str, Any]],
+    ) -> httpx.Response:
+        headers = None
+        if self._token_provider is not None:
+            headers = {"Authorization": f"Bearer {self._token_provider()}"}
+        try:
+            return self._http.request(
+                method, path, json=json, params=params, headers=headers
+            )
+        except httpx.TransportError as e:
+            raise CognisConnectionError(
+                f"Could not reach memory service at {self._base_url}: {e}"
+            ) from e
 
     def _request(
         self,
@@ -128,12 +220,14 @@ class CognisClient:
         if json:
             json = {k: v for k, v in json.items() if v is not None}
 
-        try:
-            response = self._http.request(method, path, json=json, params=params)
-        except httpx.TransportError as e:
-            raise CognisConnectionError(
-                f"Could not reach memory service at {self._base_url}: {e}"
-            ) from e
+        response = self._send(method, path, json, params)
+
+        # An expired/revoked bearer token earns exactly one refresh + retry.
+        if response.status_code == 401 and self._token_provider is not None:
+            invalidate = getattr(self._token_provider, "invalidate", None)
+            if callable(invalidate):
+                invalidate()
+            response = self._send(method, path, json, params)
 
         if response.status_code >= 400:
             self._raise_for_status(response)

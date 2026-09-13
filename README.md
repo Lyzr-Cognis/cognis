@@ -74,14 +74,19 @@ Resolution order is always **parameter → environment variable → default**:
 
 | Setting | Parameter | Env var | Default |
 |---------|-----------|---------|---------|
-| API key | `api_key` | `LYZR_API_KEY` | — (required) |
-| Service URL | `base_url` | `BASE_MEMORY_URL` | `https://memory.studio.lyzr.ai` |
+| API key | `api_key` | `LYZR_API_KEY` | — |
+| API key header | `api_key_header` | — | `x-api-key` |
+| Bearer token | `token` / `token_provider` | `LYZR_MEMORY_TOKEN` | — |
+| Tenant headers | `tenant` (+ `tenant_headers` rename map) | — | — |
+| Service URL | `base_url` | `LYZR_MEMORY_BASE_URL` (legacy: `BASE_MEMORY_URL`) | `https://memory.studio.lyzr.ai` |
 | Timeout | `timeout` | — | `30.0` seconds |
+
+At least one credential — `api_key`, `token`, or `token_provider` — is required.
 
 **On-prem / self-hosted deployments:** point the client at your own lyzr-memory deployment — nothing else changes:
 
 ```bash
-export BASE_MEMORY_URL="https://memory.your-company.internal"
+export LYZR_MEMORY_BASE_URL="https://memory.your-company.internal"
 ```
 
 ```python
@@ -91,13 +96,52 @@ m = CognisClient(api_key="...", base_url="https://memory.your-company.internal",
 
 ### Authentication & authorization
 
-- **Authn** — every request carries your API key as an `x-api-key` header. Invalid or missing keys raise `CognisAuthenticationError`.
-- **Org isolation** — the service derives your organization from the API key; all reads and writes are scoped to it. Two orgs using the same `owner_id` never see each other's data.
-- **Authz (RBAC)** — write operations (`delete`, `update`, `clear`) require the `memory:write` permission on your key's policy. A denied permission raises `CognisPermissionError` with the missing permission named.
+`CognisClient` supports every auth mode a lyzr-memory deployment can be
+configured with (`AUTH_MODES`), and the factors combine freely:
+
+- **API key** (default) — sent in the `api_key_header` (default `x-api-key`).
+  Works for Lyzr Studio keys, standalone `lm_...` keys, and imported
+  enterprise keys (e.g. `api_key_header="x-pepgenx-apikey"`).
+- **OIDC bearer token** (Okta, Entra, Auth0, Keycloak) — for deployments
+  running the `oidc_jwt` driver. Pass a static `token`, or a `token_provider`
+  callable that returns a fresh token per request. The bundled
+  `OktaClientCredentials` provider implements the OAuth2 client-credentials
+  flow with caching until 30s before expiry; on a 401 the client invalidates
+  it once and retries.
+- **Tenant headers** — for composite deployments that require
+  `team_id`/`project_id`/`user_id` on every request.
+
+```python
+from cognis import CognisClient, OktaClientCredentials
+
+# OIDC bearer via Okta client credentials
+okta = OktaClientCredentials(
+    issuer="https://acme.okta.com/oauth2/aus123",
+    client_id="0oa...",
+    client_secret="...",
+    scopes=["memory.read", "memory.write"],
+)
+m = CognisClient(token_provider=okta, owner_id="user_1")
+
+# Composite (enterprise gateway): bearer + API key + tenant headers
+m = CognisClient(
+    token_provider=okta,
+    api_key="pep-...",
+    api_key_header="x-pepgenx-apikey",
+    tenant={"team_id": "T1", "project_id": "P1", "user_id": "049000001"},
+    owner_id="user_1",
+)
+```
+
+- **Org isolation** — the service derives your organization (and optional
+  project) from the credential — an API key's binding or a bearer token's
+  claims; all reads and writes are scoped to it. Two orgs using the same
+  `owner_id` never see each other's data.
+- **Authz (RBAC)** — write operations (`delete`, `update`, `clear`) require the `memory:write` permission on your key's policy or token's roles. A denied permission raises `CognisPermissionError` with the missing permission named.
 
 ```python
 from cognis import (
-    CognisAuthenticationError,  # bad/missing API key (401/403)
+    CognisAuthenticationError,  # bad/missing credential (401/403)
     CognisPermissionError,      # key valid, RBAC permission missing (403)
     CognisAPIError,             # other service errors (has .status_code, .detail)
     CognisConnectionError,      # network unreachable / timeout
@@ -108,7 +152,7 @@ try:
 except CognisPermissionError as e:
     print(f"Ask your org admin for memory:write: {e}")
 except CognisAuthenticationError:
-    print("Check LYZR_API_KEY")
+    print("Check LYZR_API_KEY / LYZR_MEMORY_TOKEN")
 ```
 
 ## Quick Start — Local (`Cognis`)

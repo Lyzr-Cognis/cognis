@@ -43,8 +43,9 @@ def body(request: httpx.Request) -> dict:
 # ── Construction / auth ─────────────────────────────────────────────────
 
 
-def test_missing_api_key_raises(monkeypatch):
+def test_missing_credentials_raises(monkeypatch):
     monkeypatch.delenv("LYZR_API_KEY", raising=False)
+    monkeypatch.delenv("LYZR_MEMORY_TOKEN", raising=False)
     with pytest.raises(CognisAuthenticationError, match="LYZR_API_KEY"):
         CognisClient(owner_id="user_1")
 
